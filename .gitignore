@@ -1,0 +1,48 @@
+# Maven
+/target/
+!.mvn/wrapper/maven-wrapper.jar
+.mvn/timing.properties
+
+# Logs
+*.log
+logs/
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# IDEs
+# VS Code
+.vscode/
+.code-workspace
+
+# IntelliJ
+*.iml
+.idea/
+*.ipr
+*.iws
+out/
+
+# Eclipse
+.project
+.classpath
+.settings/
+bin/
+
+# Build
+*.class
+*.jar
+*.war
+*.ear
+
+# Temporary
+*.tmp
+*.swp
+*.bak
+*.old
+
+# Environment files
+.env
+
+# Mac system files
+._*
