@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>⏱️ Stopwatch</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(to right, #2c3e50, #3498db);
+      color: white;
+      text-align: center;
+      padding: 40px;
+    }
+    h1 {
+      font-size: 3em;
+      margin-bottom: 20px;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 10px;
+      font-size: 1.2em;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button#start { background-color: #27ae60; color: white; }
+    button#stop { background-color: #e67e22; color: white; }
+    button#reset { background-color: #e74c3c; color: white; }
+    button:hover { opacity: 0.8; }
+    .info {
+      font-size: 1.2em;
+      margin-top: 20px;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 15px;
+      border-radius: 10px;
+      display: inline-block;
+      min-width: 250px;
+    }
+  </style>
+</head>
+<body>
+  <h1>⏱️ Stopwatch</h1>
+  <button id="start">Start</button>
+  <button id="stop">Stop</button>
+  <button id="reset">Reset</button>
+
+  <div class="info" id="status">Status: Not started</div>
+  <div class="info" id="startTime">Start Time: --</div>
+  <div class="info" id="stopTime">Stop Time: --</div>
+  <div class="info" id="elapsed">Elapsed Time: 0 seconds</div>
+
+  <script>
+    let startTimestamp = 0;
+    let stopTimestamp = 0;
+
+    document.getElementById('start').addEventListener('click', () => {
+      fetch('http://localhost:8080/api/stopwatch/start', { method: 'POST' })
+        .then(response => response.json())
+        .then(data => {
+          document.getElementById('status').textContent = 'Status: ' + data.message;
+          startTimestamp = Date.now();
+          document.getElementById('startTime').textContent = 'Start Time: ' + new Date(startTimestamp).toLocaleTimeString();
+        })
+        .catch(error => {
+          document.getElementById('status').textContent = 'Status: Error starting';
+        });
+    });
+
+    document.getElementById('stop').addEventListener('click', () => {
+      fetch('http://localhost:8080/api/stopwatch/stop', { method: 'POST' })
+        .then(response => response.text())
+        .then(message => {
+          document.getElementById('status').textContent = 'Status: ' + message;
+          stopTimestamp = Date.now();
+          const elapsed = Math.round((stopTimestamp - startTimestamp) / 1000);
+          document.getElementById('stopTime').textContent = 'Stop Time: ' + new Date(stopTimestamp).toLocaleTimeString();
+          document.getElementById('elapsed').textContent = 'Elapsed Time: ' + elapsed + ' seconds';
+        })
+        .catch(error => {
+          document.getElementById('status').textContent = 'Status: Error stopping';
+        });
+    });
+
+    document.getElementById('reset').addEventListener('click', () => {
+      fetch('http://localhost:8080/api/stopwatch/reset', { method: 'POST' })
+        .then(response => response.text())
+        .then(message => {
+          document.getElementById('status').textContent = 'Status: ' + message;
+          document.getElementById('startTime').textContent = 'Start Time: --';
+          document.getElementById('stopTime').textContent = 'Stop Time: --';
+          document.getElementById('elapsed').textContent = 'Elapsed Time: 0 seconds';
+        })
+        .catch(error => {
+          document.getElementById('status').textContent = 'Status: Error resetting';
+        });
+    });
+  </script>
+</body>
+</html>
