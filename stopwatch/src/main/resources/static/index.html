@@ -38,6 +38,14 @@
       display: inline-block;
       min-width: 250px;
     }
+    .error {
+      background-color: rgba(231, 76, 60, 0.3);
+      color: #fff;
+      padding: 10px;
+      border-radius: 5px;
+      margin: 10px;
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -46,6 +54,8 @@
   <button id="stop">Stop</button>
   <button id="reset">Reset</button>
 
+  <div class="error" id="errorMsg"></div>
+  
   <div class="info" id="status">Status: Not started</div>
   <div class="info" id="startTime">Start Time: --</div>
   <div class="info" id="stopTime">Stop Time: --</div>
@@ -55,47 +65,122 @@
     let startTimestamp = 0;
     let stopTimestamp = 0;
 
+    // Function to show error messages
+    function showError(message) {
+      const errorDiv = document.getElementById('errorMsg');
+      errorDiv.textContent = message;
+      errorDiv.style.display = 'block';
+      setTimeout(() => {
+        errorDiv.style.display = 'none';
+      }, 3000);
+    }
+
+    // Function to update status display
+    function updateStatus(message) {
+      document.getElementById('status').textContent = 'Status: ' + message;
+    }
+
     document.getElementById('start').addEventListener('click', () => {
-      fetch('http://localhost:8080/api/stopwatch/start', { method: 'POST' })
-        .then(response => response.json())
+      fetch('/api/stopwatch/start', { 
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+          return response.json();
+        })
         .then(data => {
-          document.getElementById('status').textContent = 'Status: ' + data.message;
+          updateStatus(data.message || 'Started');
           startTimestamp = Date.now();
           document.getElementById('startTime').textContent = 'Start Time: ' + new Date(startTimestamp).toLocaleTimeString();
         })
         .catch(error => {
-          document.getElementById('status').textContent = 'Status: Error starting';
+          console.error('Error starting stopwatch:', error);
+          updateStatus('Error starting');
+          showError('Failed to start stopwatch. Please try again.');
         });
     });
 
     document.getElementById('stop').addEventListener('click', () => {
-      fetch('http://localhost:8080/api/stopwatch/stop', { method: 'POST' })
-        .then(response => response.text())
+      fetch('/api/stopwatch/stop', { 
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+          return response.text();
+        })
         .then(message => {
-          document.getElementById('status').textContent = 'Status: ' + message;
+          updateStatus(message || 'Stopped');
           stopTimestamp = Date.now();
           const elapsed = Math.round((stopTimestamp - startTimestamp) / 1000);
           document.getElementById('stopTime').textContent = 'Stop Time: ' + new Date(stopTimestamp).toLocaleTimeString();
           document.getElementById('elapsed').textContent = 'Elapsed Time: ' + elapsed + ' seconds';
         })
         .catch(error => {
-          document.getElementById('status').textContent = 'Status: Error stopping';
+          console.error('Error stopping stopwatch:', error);
+          updateStatus('Error stopping');
+          showError('Failed to stop stopwatch. Please try again.');
         });
     });
 
     document.getElementById('reset').addEventListener('click', () => {
-      fetch('http://localhost:8080/api/stopwatch/reset', { method: 'POST' })
-        .then(response => response.text())
+      fetch('/api/stopwatch/reset', { 
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+          return response.text();
+        })
         .then(message => {
-          document.getElementById('status').textContent = 'Status: ' + message;
+          updateStatus(message || 'Reset');
           document.getElementById('startTime').textContent = 'Start Time: --';
           document.getElementById('stopTime').textContent = 'Stop Time: --';
           document.getElementById('elapsed').textContent = 'Elapsed Time: 0 seconds';
+          startTimestamp = 0;
+          stopTimestamp = 0;
         })
         .catch(error => {
-          document.getElementById('status').textContent = 'Status: Error resetting';
+          console.error('Error resetting stopwatch:', error);
+          updateStatus('Error resetting');
+          showError('Failed to reset stopwatch. Please try again.');
         });
     });
+
+    // Optional: Periodically check status
+    function checkStatus() {
+      fetch('/api/stopwatch/status')
+        .then(response => {
+          if (response.ok) {
+            return response.json();
+          }
+        })
+        .then(data => {
+          if (data) {
+            // Update UI based on server status if needed
+            console.log('Server status:', data);
+          }
+        })
+        .catch(error => {
+          console.log('Status check failed:', error);
+        });
+    }
+
+    // Check status every 30 seconds (optional)
+    // setInterval(checkStatus, 30000);
   </script>
 </body>
 </html>
