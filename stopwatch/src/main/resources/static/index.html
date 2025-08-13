@@ -38,6 +38,14 @@
       display: inline-block;
       min-width: 250px;
     }
+    .error {
+      background-color: rgba(231, 76, 60, 0.3);
+      color: #fff;
+      padding: 10px;
+      border-radius: 5px;
+      margin: 10px;
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -46,6 +54,8 @@
   <button id="stop">Stop</button>
   <button id="reset">Reset</button>
 
+  <div class="error" id="errorMsg"></div>
+  
   <div class="info" id="status">Status: Not started</div>
   <div class="info" id="startTime">Start Time: --</div>
   <div class="info" id="stopTime">Stop Time: --</div>
@@ -124,11 +134,35 @@
           document.getElementById('startTime').textContent = 'Start Time: --';
           document.getElementById('stopTime').textContent = 'Stop Time: --';
           document.getElementById('elapsed').textContent = 'Elapsed Time: 0 seconds';
+          startTimestamp = 0;
+          stopTimestamp = 0;
         })
         .catch(() => {
           updateStatus('Network error. Please try again.', 'error');
         });
     });
+
+    // Optional: Periodically check status
+    function checkStatus() {
+      fetch('/api/stopwatch/status')
+        .then(response => {
+          if (response.ok) {
+            return response.json();
+          }
+        })
+        .then(data => {
+          if (data) {
+            // Update UI based on server status if needed
+            console.log('Server status:', data);
+          }
+        })
+        .catch(error => {
+          console.log('Status check failed:', error);
+        });
+    }
+
+    // Check status every 30 seconds (optional)
+    // setInterval(checkStatus, 30000);
   </script>
 </body>
 </html>
