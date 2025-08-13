@@ -12,7 +12,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 // Allow requests from frontend (updated to include both localhost and 127.0.0.1)
-@CrossOrigin(origins = {"http://localhost:5000", "http://127.0.0.1:5000"})
+@CrossOrigin(origins = {"http://localhost:5000", "http://127.0.0.1:5000",
+    "http://stopwatch-env.eba-umrfbtvf.us-east-1.elasticbeanstalk.com"})
 @RestController
 @RequestMapping("/api/stopwatch")
 public class StopwatchController {

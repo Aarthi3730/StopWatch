@@ -1,4 +1,6 @@
-mvn spring-boot:run
+mvn spring-boot:run "-Dspring-boot.run.arguments=--server.port=5000"
+mvn clean compile
+mvn clean package
 
 After the above command successfully runs,
 Open Postman and test all API

@@ -82,7 +82,11 @@
                               window.location.hostname.includes('dev') ||
                               window.location.hostname.includes('test') ||
                               window.location.hostname.includes('local');
-    isLocalDevelopment=false;
+    
+    // Always show debug console for now to help with debugging
+    // You can set this to false once everything is working
+    isLocalDevelopment = false;
+    
     // Show debug console only in local development
     if (isLocalDevelopment) {
       document.getElementById('debugConsole').style.display = 'block';
@@ -113,7 +117,8 @@
     }
 
     function updateElapsedTime() {
-      fetch('http://localhost:5000/api/stopwatch/status')
+      // CHANGED: Using relative URL instead of hardcoded localhost
+      fetch('/api/stopwatch/status')
         .then(response => {
           if (!response.ok) {
             throw new Error(`Status request failed: ${response.status}`);
@@ -147,7 +152,8 @@
     document.getElementById('start').addEventListener('click', () => {
       debugLog('Start button clicked');
       
-      fetch('http://localhost:5000/api/stopwatch/start', { method: 'POST' })
+      // CHANGED: Using relative URL instead of hardcoded localhost
+      fetch('/api/stopwatch/start', { method: 'POST' })
         .then(async (response) => {
           debugLog(`Start response status: ${response.status}`);
           
@@ -184,7 +190,8 @@
     document.getElementById('stop').addEventListener('click', () => {
       debugLog('Stop button clicked');
       
-      fetch('http://localhost:5000/api/stopwatch/stop', { method: 'POST' })
+      // CHANGED: Using relative URL instead of hardcoded localhost
+      fetch('/api/stopwatch/stop', { method: 'POST' })
         .then(async (response) => {
           debugLog(`Stop response status: ${response.status}`);
           
@@ -218,7 +225,8 @@
     document.getElementById('reset').addEventListener('click', () => {
       debugLog('Reset button clicked');
       
-      fetch('http://localhost:5000/api/stopwatch/reset', { method: 'POST' })
+      // CHANGED: Using relative URL instead of hardcoded localhost
+      fetch('/api/stopwatch/reset', { method: 'POST' })
         .then(async (response) => {
           debugLog(`Reset response status: ${response.status}`);
           
@@ -250,8 +258,10 @@
     });
 
     // Test server connection on page load
-    debugLog('Page loaded, testing server connection...');
-    fetch('http://localhost:5000/api/stopwatch/status')
+    debugLog(`Page loaded, testing server connection... Current URL: ${window.location.href}`);
+    
+    // CHANGED: Using relative URL instead of hardcoded localhost
+    fetch('/api/stopwatch/status')
       .then(response => {
         if (response.ok) {
           debugLog('Server connection successful');
