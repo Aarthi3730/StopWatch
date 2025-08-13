@@ -12,8 +12,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-// Allow requests from frontend (e.g., http://127.0.0.1:8080)
-@CrossOrigin(origins = "http://127.0.0.1:8080")  // ✅ Allow frontend access
+// Allow requests from frontend (e.g., http://127.0.0.1:5000)
+@CrossOrigin(origins = "http://127.0.0.1:5000")  // ✅ Allow frontend access
 @RestController
 @RequestMapping("/api/stopwatch")
 public class StopwatchController {
