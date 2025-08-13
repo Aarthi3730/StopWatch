@@ -38,13 +38,16 @@
       display: inline-block;
       min-width: 250px;
     }
-    .error {
-      background-color: rgba(231, 76, 60, 0.3);
-      color: #fff;
+    .debug {
+      background: rgba(0, 0, 0, 0.3);
       padding: 10px;
-      border-radius: 5px;
       margin: 10px;
-      display: none;
+      font-family: monospace;
+      font-size: 0.9em;
+      text-align: left;
+      max-height: 200px;
+      overflow-y: auto;
+      border-radius: 5px;
     }
   </style>
 </head>
@@ -53,17 +56,50 @@
   <button id="start">Start</button>
   <button id="stop">Stop</button>
   <button id="reset">Reset</button>
-
-  <div class="error" id="errorMsg"></div>
   
   <div class="info" id="status">Status: Not started</div>
   <div class="info" id="startTime">Start Time: --</div>
   <div class="info" id="stopTime">Stop Time: --</div>
-  <div class="info" id="elapsed">Elapsed Time: 0 seconds</div>
+  <div class="info" id="elapsed">Elapsed Time: 0 ms</div>
+  
+  <!-- Debug console - only show on localhost -->
+  <div class="debug" id="debugConsole" style="display: none;">Debug Console:<br/></div>
 
   <script>
-    let startTimestamp = 0;
-    let stopTimestamp = 0;
+    let startTime = null;
+    let timerInterval = null;
+    
+    // Check if we're in local development environment
+    let isLocalDevelopment = window.location.hostname === 'localhost' || 
+                              window.location.hostname === '127.0.0.1' ||
+                              window.location.hostname.startsWith('192.168.') ||
+                              window.location.hostname.startsWith('10.') ||
+                              window.location.hostname.startsWith('172.') ||
+                              window.location.port === '5000' ||
+                              window.location.port === '8080' ||
+                              window.location.port === '3000' ||
+                              window.location.protocol === 'file:' ||
+                              window.location.hostname.includes('dev') ||
+                              window.location.hostname.includes('test') ||
+                              window.location.hostname.includes('local');
+    isLocalDevelopment=false;
+    // Show debug console only in local development
+    if (isLocalDevelopment) {
+      document.getElementById('debugConsole').style.display = 'block';
+      console.log('Debug mode enabled - Local development environment detected');
+    } else {
+      console.log('Production mode - Debug console hidden');
+    }
+
+    function debugLog(message) {
+      if (isLocalDevelopment) {
+        const debugEl = document.getElementById('debugConsole');
+        const timestamp = new Date().toLocaleTimeString();
+        debugEl.innerHTML += `[${timestamp}] ${message}<br/>`;
+        debugEl.scrollTop = debugEl.scrollHeight;
+      }
+      console.log(message);
+    }
 
     function updateStatus(message, type = "info") {
       const statusEl = document.getElementById('status');
@@ -72,97 +108,183 @@
       else if (type === "warning") statusEl.style.color = "orange";
       else if (type === "error") statusEl.style.color = "red";
       else statusEl.style.color = "white";
+      
+      debugLog(`Status: ${message} (${type})`);
+    }
+
+    function updateElapsedTime() {
+      fetch('http://localhost:5000/api/stopwatch/status')
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`Status request failed: ${response.status}`);
+          }
+          return response.json();
+        })
+        .then(data => {
+          debugLog(`Status update: running=${data.running}, elapsed=${data.elapsedTimeMillis}ms`);
+          
+          if (data.elapsedTimeMillis !== undefined) {
+            const seconds = Math.floor(data.elapsedTimeMillis / 1000);
+            const ms = data.elapsedTimeMillis % 1000;
+            document.getElementById('elapsed').textContent = 
+              `Elapsed Time: ${seconds}s ${ms.toString().padStart(3, '0')}ms`;
+          }
+          
+          // If stopwatch is not running, stop the timer
+          if (!data.running && timerInterval) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+            debugLog('Timer stopped - stopwatch not running');
+          }
+        })
+        .catch(error => {
+          debugLog(`Timer update error: ${error.message}`);
+          // Don't update status for timer errors to avoid spam
+        });
     }
 
     // Handle Start
     document.getElementById('start').addEventListener('click', () => {
+      debugLog('Start button clicked');
+      
       fetch('http://localhost:5000/api/stopwatch/start', { method: 'POST' })
         .then(async (response) => {
-          const data = await response.json();
-
-          if (!response.ok || data.status === 'warning' || data.status === 'error') {
-            updateStatus(data.message || 'Something went wrong.', data.status || 'error');
-            return;
+          debugLog(`Start response status: ${response.status}`);
+          
+          if (response.ok) {
+            const data = await response.json();
+            debugLog(`Start response data: ${JSON.stringify(data)}`);
+            
+            if (data.status === 'success') {
+              updateStatus(data.message || 'Stopwatch started successfully!', 'success');
+              startTime = new Date();
+              document.getElementById('startTime').textContent =
+                'Start Time: ' + startTime.toLocaleTimeString();
+              
+              // Start timer to update elapsed time
+              if (!timerInterval) {
+                timerInterval = setInterval(updateElapsedTime, 100);
+              }
+            } else if (data.status === 'warning') {
+              updateStatus(data.message || 'Warning', 'warning');
+            }
+          } else {
+            const errorText = await response.text();
+            debugLog(`Start error response: ${errorText}`);
+            updateStatus('Failed to start stopwatch', 'error');
           }
-
-          updateStatus(data.message || 'Stopwatch started successfully!', 'success');
-          startTimestamp = Date.now();
-          document.getElementById('startTime').textContent =
-            'Start Time: ' + new Date(startTimestamp).toLocaleTimeString();
         })
-        .catch(() => {
+        .catch((error) => {
+          debugLog(`Start error: ${error.message}`);
           updateStatus('Network error. Please try again.', 'error');
         });
     });
 
     // Handle Stop
     document.getElementById('stop').addEventListener('click', () => {
+      debugLog('Stop button clicked');
+      
       fetch('http://localhost:5000/api/stopwatch/stop', { method: 'POST' })
         .then(async (response) => {
+          debugLog(`Stop response status: ${response.status}`);
+          
           const data = await response.json();
+          debugLog(`Stop response data: ${JSON.stringify(data)}`);
 
-          if (!response.ok || data.status === 'warning' || data.status === 'error') {
+          if (response.ok && data.status === 'success') {
+            updateStatus(data.message || 'Stopwatch stopped successfully!', 'success');
+            const stopTime = new Date();
+            document.getElementById('stopTime').textContent =
+              'Stop Time: ' + stopTime.toLocaleTimeString();
+            
+            // Stop the timer and get final elapsed time
+            if (timerInterval) {
+              clearInterval(timerInterval);
+              timerInterval = null;
+            }
+            updateElapsedTime(); // Final update
+            
+          } else {
             updateStatus(data.message || 'Something went wrong.', data.status || 'error');
-            return;
           }
-
-          updateStatus(data.message || 'Stopwatch stopped successfully!', 'success');
-          stopTimestamp = Date.now();
-          const elapsed = Math.round((stopTimestamp - startTimestamp) / 1000);
-          document.getElementById('stopTime').textContent =
-            'Stop Time: ' + new Date(stopTimestamp).toLocaleTimeString();
-          document.getElementById('elapsed').textContent =
-            'Elapsed Time: ' + elapsed + ' seconds';
         })
-        .catch(() => {
+        .catch((error) => {
+          debugLog(`Stop network error: ${error.message}`);
           updateStatus('Network error. Please try again.', 'error');
         });
     });
 
     // Handle Reset
     document.getElementById('reset').addEventListener('click', () => {
+      debugLog('Reset button clicked');
+      
       fetch('http://localhost:5000/api/stopwatch/reset', { method: 'POST' })
         .then(async (response) => {
+          debugLog(`Reset response status: ${response.status}`);
+          
           const data = await response.json();
+          debugLog(`Reset response data: ${JSON.stringify(data)}`);
 
-          if (!response.ok || data.status === 'warning' || data.status === 'error') {
+          if (response.ok && data.status === 'success') {
+            updateStatus(data.message || 'Stopwatch reset successfully!', 'success');
+            
+            // Reset UI
+            document.getElementById('startTime').textContent = 'Start Time: --';
+            document.getElementById('stopTime').textContent = 'Stop Time: --';
+            document.getElementById('elapsed').textContent = 'Elapsed Time: 0 ms';
+            
+            // Stop the timer
+            if (timerInterval) {
+              clearInterval(timerInterval);
+              timerInterval = null;
+            }
+            
+          } else {
             updateStatus(data.message || 'Something went wrong.', data.status || 'error');
-            return;
           }
-
-          updateStatus(data.message || 'Stopwatch reset successfully!', 'success');
-          document.getElementById('startTime').textContent = 'Start Time: --';
-          document.getElementById('stopTime').textContent = 'Stop Time: --';
-          document.getElementById('elapsed').textContent = 'Elapsed Time: 0 seconds';
-          startTimestamp = 0;
-          stopTimestamp = 0;
         })
-        .catch(() => {
+        .catch((error) => {
+          debugLog(`Reset network error: ${error.message}`);
           updateStatus('Network error. Please try again.', 'error');
         });
     });
 
-    // Optional: Periodically check status
-    function checkStatus() {
-      fetch('/api/stopwatch/status')
-        .then(response => {
-          if (response.ok) {
-            return response.json();
+    // Test server connection on page load
+    debugLog('Page loaded, testing server connection...');
+    fetch('http://localhost:5000/api/stopwatch/status')
+      .then(response => {
+        if (response.ok) {
+          debugLog('Server connection successful');
+          return response.json();
+        } else {
+          debugLog(`Server responded with status: ${response.status}`);
+        }
+      })
+      .then(data => {
+        if (data) {
+          debugLog(`Initial server status: ${JSON.stringify(data)}`);
+          
+          // Update UI based on current server state
+          if (data.running) {
+            updateStatus('Stopwatch is currently running', 'success');
+            if (!timerInterval) {
+              timerInterval = setInterval(updateElapsedTime, 100);
+            }
+          } else if (data.elapsedTimeMillis > 0) {
+            updateStatus('Stopwatch is stopped', 'info');
+            const seconds = Math.floor(data.elapsedTimeMillis / 1000);
+            const ms = data.elapsedTimeMillis % 1000;
+            document.getElementById('elapsed').textContent = 
+              `Elapsed Time: ${seconds}s ${ms.toString().padStart(3, '0')}ms`;
+          } else {
+            updateStatus('Stopwatch is reset', 'info');
           }
-        })
-        .then(data => {
-          if (data) {
-            // Update UI based on server status if needed
-            console.log('Server status:', data);
-          }
-        })
-        .catch(error => {
-          console.log('Status check failed:', error);
-        });
-    }
-
-    // Check status every 30 seconds (optional)
-    // setInterval(checkStatus, 30000);
+        }
+      })
+      .catch(error => {
+        debugLog(`Server connection failed: ${error.message}`);
+        updateStatus('Server connection failed', 'error');
+      });
   </script>
 </body>
 </html>
